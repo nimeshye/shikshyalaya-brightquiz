@@ -26,9 +26,7 @@ $("loginForm").addEventListener("submit", async (event) => {
     currentUser = data.user;
     await showDashboard();
   } catch (err) {
-    /*message("Sign-in failed. Check your username and password, then try again.");*/
-    message("Login error: " + err.message);
-    console.error("Login error:", err);
+    message("Sign-in failed. Check your username and password, then try again.");
   } finally { button.disabled = false; button.innerHTML = 'Sign in <span>→</span>'; }
 });
 
@@ -52,14 +50,20 @@ async function showDashboard() {
     throw new Error("This account is not allowed to access the student dashboard.");
   }
   $("studentName").textContent = profile.display_name || profile.username;
-  const [{data: classes}, {data: subjects}, {data: attempts}] = await Promise.all([
-    db.from("classes").select("id,name").order("sort_order"),
+  const [{data: studentClass}, {data: subjects}, {data: attempts}] = await Promise.all([
+    profile.class_id
+      ? db.from("classes").select("id,name").eq("id", profile.class_id).maybeSingle()
+      : Promise.resolve({data:null}),
     db.from("subjects").select("id,name").order("name"),
     db.from("attempts").select("id,score,total_questions").eq("student_id", currentUser.id).eq("status","submitted")
   ]);
-  $("classFilter").innerHTML = '<option value="">All classes</option>' + (classes||[]).map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
+  // Students can only choose their assigned class; the database policies enforce this too.
+  $("classFilter").innerHTML = studentClass
+    ? `<option value="${studentClass.id}">${escapeHtml(studentClass.name)}</option>`
+    : '<option value="">No class assigned</option>';
+  $("classFilter").value = studentClass?.id || "";
+  $("classFilter").disabled = true;
   $("subjectFilter").innerHTML = '<option value="">All subjects</option>' + (subjects||[]).map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
-  if (profile.class_id) $("classFilter").value = profile.class_id;
   const completed = attempts || [];
   $("attemptCount").textContent = completed.length;
   $("averageScore").textContent = completed.length ? Math.round(completed.reduce((n,a)=>n+(a.total_questions ? a.score/a.total_questions*100 : 0),0)/completed.length)+"%" : "—";

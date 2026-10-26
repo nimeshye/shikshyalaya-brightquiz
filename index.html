@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#2f7d32" />
+  <title>Shikshyalaya Nepal | BrightQuiz</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#"><span class="brand-mark">B</span><span>Shikshyalaya <span class="yellow-text">Nepal</span><small>LEARN · PLAY · GROW</small></span></a>
+    <span class="top-tag">Student Learning Portal</span>
+  </header>
+
+  <main class="shell">
+    <section id="loginView" class="login-layout">
+      <div class="welcome">
+        <span class="eyebrow">YOUR LEARNING ADVENTURE</span>
+        <h1>Small steps.<br><span>Big achievements.</span></h1>
+        <p>Choose your class, explore your subjects, and show what you know.</p>
+        <div class="feature-list">
+          <div><span class="feature-icon">✓</span> Quizzes for your class</div>
+          <div><span class="feature-icon">★</span> Instant results</div>
+          <div><span class="feature-icon">↗</span> Learn at your own pace</div>
+        </div>
+        <div class="decor decor-one"></div><div class="decor decor-two"></div>
+      </div>
+      <div class="login-card">
+        <div class="login-symbol">✏️</div>
+        <h2>Welcome to Shikshyalaya!</h2>
+        <p class="muted">Sign in to start your quiz journey.</p>
+        <form id="loginForm">
+          <label for="username">Student username</label>
+          <input id="username" name="username" autocomplete="username" placeholder="e.g. student01" required />
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required />
+          <button class="primary-btn" type="submit">Sign in <span>→</span></button>
+          <p id="loginMessage" class="message" role="status"></p>
+        </form>
+        <p class="small-note">Your school provides your username and password.</p>
+        <p class="small-note"><a href="admin.html">Administrator sign in</a></p>
+      </div>
+    </section>
+
+    <section id="dashboardView" class="hidden">
+      <div class="dashboard-heading">
+        <div><span class="eyebrow">STUDENT DASHBOARD</span><h1>Hello, <span id="studentName">Student</span>! 👋</h1><p class="muted">Ready to learn something new today?</p></div>
+        <button id="logoutBtn" class="outline-btn">Sign out</button>
+      </div>
+      <div class="stats">
+        <div class="stat-card"><span class="stat-icon green">▤</span><div><strong id="quizCount">0</strong><small>Available quizzes</small></div></div>
+        <div class="stat-card"><span class="stat-icon yellow">★</span><div><strong id="attemptCount">0</strong><small>Quizzes completed</small></div></div>
+        <div class="stat-card"><span class="stat-icon mint">✓</span><div><strong id="averageScore">—</strong><small>Average score</small></div></div>
+      </div>
+      <div class="filter-panel">
+        <div><label for="classFilter">Class</label><select id="classFilter"><option value="">All classes</option></select></div>
+        <div><label for="subjectFilter">Subject</label><select id="subjectFilter"><option value="">All subjects</option></select></div>
+        <button id="filterBtn" class="primary-btn compact">Find quizzes</button>
+      </div>
+      <div class="section-heading"><div><h2>Available quizzes</h2><p class="muted">Choose a quiz to begin.</p></div></div>
+      <div id="quizGrid" class="quiz-grid"><div class="empty-state">Sign in to load quizzes.</div></div>
+      <div id="quizRunner" class="quiz-runner hidden"></div>
+      <div id="resultsPanel" class="results-panel hidden"></div>
+    </section>
+    <footer>© <span id="year"></span> Shikshyalaya Nepal · BrightQuiz · Learn something wonderful every day.</footer>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

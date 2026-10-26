@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#2f7d32" />
+  <title>Admin | Shikshyalaya Nepal BrightQuiz</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html"><span class="brand-mark">S</span><span>Shikshyalaya <span class="yellow-text">Nepal</span><small>BRIGHTQUIZ ADMIN</small></span></a>
+    <a class="outline-btn" href="index.html">Student website</a>
+  </header>
+  <main class="shell">
+    <section id="adminLoginView" class="login-layout">
+      <div class="welcome">
+        <span class="eyebrow">RESTRICTED ACCESS</span>
+        <h1>Manage learning.<br><span>Inspire progress.</span></h1>
+        <p>Publish class-wise quizzes and manage the learning experience for Shikshyalaya Nepal students.</p>
+        <div class="feature-list"><div><span class="feature-icon">✓</span> Create class-wise quizzes</div><div><span class="feature-icon">✓</span> Add multiple-choice questions</div><div><span class="feature-icon">✓</span> Review student results</div></div>
+      </div>
+      <div class="login-card">
+        <div class="login-symbol">🔐</div><h2>Administrator sign in</h2><p class="muted">Only the designated school administrator can access this area.</p>
+        <form id="adminLoginForm">
+          <label for="adminUsername">Administrator username</label><input id="adminUsername" autocomplete="username" required placeholder="Enter admin username" />
+          <label for="adminPassword">Password</label><input id="adminPassword" type="password" autocomplete="current-password" required placeholder="Enter password" />
+          <button class="primary-btn" type="submit">Sign in to admin <span>→</span></button>
+          <p id="adminLoginMessage" class="message" role="status"></p>
+        </form>
+        <p class="small-note">Administrator accounts must be created by the database owner.</p>
+      </div>
+    </section>
+
+    <section id="adminView" class="hidden">
+      <div class="dashboard-heading"><div><span class="eyebrow">SCHOOL ADMINISTRATION</span><h1>Quiz management</h1><p class="muted">Create, publish, and review quizzes for Classes 1–10.</p></div><button id="adminLogoutBtn" class="outline-btn">Sign out</button></div>
+      <div class="stats">
+        <div class="stat-card"><span class="stat-icon green">▤</span><div><strong id="adminQuizCount">0</strong><small>Total quizzes</small></div></div>
+        <div class="stat-card"><span class="stat-icon yellow">✓</span><div><strong id="adminPublishedCount">0</strong><small>Published quizzes</small></div></div>
+        <div class="stat-card"><span class="stat-icon mint">★</span><div><strong id="adminAttemptCount">0</strong><small>Submitted attempts</small></div></div>
+      </div>
+      <div class="admin-columns">
+        <section class="login-card admin-form-card">
+          <span class="eyebrow" style="color:var(--green)">QUIZ BUILDER</span><h2>Create a quiz</h2><p class="muted">Add the quiz details and at least one question. Correct answers are stored separately from student-visible questions.</p>
+          <form id="createQuizForm">
+            <label for="quizTitle">Quiz title</label><input id="quizTitle" required maxlength="120" placeholder="e.g. Class 5 Mathematics — Fractions" />
+            <label for="quizDescription">Description</label><input id="quizDescription" maxlength="300" placeholder="Short instructions for students" />
+            <div class="two-fields"><div><label for="quizClass">Class</label><select id="quizClass" required></select></div><div><label for="quizSubject">Subject</label><select id="quizSubject" required></select></div></div>
+            <label for="quizDuration">Time limit (minutes)</label><input id="quizDuration" type="number" min="1" max="180" value="10" required />
+            <div class="divider-line"></div>
+            <div class="question-builder-heading"><h3>Questions</h3><button id="addQuestionBtn" type="button" class="outline-btn">+ Add question</button></div>
+            <div id="questionEditor"></div>
+            <label class="check-row"><input id="publishNow" type="checkbox" /> Publish immediately after saving</label>
+            <button id="saveQuizBtn" class="primary-btn" type="submit">Save quiz <span>→</span></button>
+            <p id="adminFormMessage" class="message" role="status"></p>
+          </form>
+        </section>
+        <section class="admin-list-card">
+          <div class="section-heading"><div><h2>Existing quizzes</h2><p class="muted">Manage publication status.</p></div><button id="refreshAdminBtn" class="outline-btn">Refresh</button></div>
+          <div id="adminQuizList" class="admin-quiz-list"><div class="empty-state">Loading quizzes…</div></div>
+          <div class="section-heading results-heading"><div><h2>Recent results</h2><p class="muted">Latest submitted attempts.</p></div></div>
+          <div id="adminResults" class="admin-results"><div class="empty-state">No results loaded.</div></div>
+        </section>
+      </div>
+    </section>
+    <footer>© <span id="year"></span> Shikshyalaya Nepal · BrightQuiz Administration</footer>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

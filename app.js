@@ -26,7 +26,9 @@ $("loginForm").addEventListener("submit", async (event) => {
     currentUser = data.user;
     await showDashboard();
   } catch (err) {
-    message("Sign-in failed. Check your username and password, then try again.");
+    /*message("Sign-in failed. Check your username and password, then try again.");*/
+    message("Login error: " + err.message);
+    console.error("Login error:", err);
   } finally { button.disabled = false; button.innerHTML = 'Sign in <span>→</span>'; }
 });
 

@@ -51,7 +51,19 @@
             <div class="question-builder-heading"><h3>Questions</h3><button id="addQuestionBtn" type="button" class="outline-btn">+ Add question</button></div>
             <div id="questionEditor"></div>
             <label class="check-row"><input id="publishNow" type="checkbox" /> Publish immediately after saving</label>
-            <button id="saveQuizBtn" class="primary-btn" type="submit">Save quiz <span>→</span></button>
+           <div class="admin-form-actions">
+  <button id="saveQuizBtn" class="primary-btn" type="submit">
+    Save quiz <span>→</span>
+  </button>
+
+  <button
+    id="cancelEditBtn"
+    class="outline-btn hidden"
+    type="button"
+  >
+    Cancel edit
+  </button>
+</div>
             <p id="adminFormMessage" class="message" role="status"></p>
           </form>
         </section>

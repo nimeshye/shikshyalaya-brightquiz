@@ -18,6 +18,9 @@ let adminUser = null;
 let questionCounter = 0;
 let editingQuizId = null;
 
+let studentRows = [];
+let classRows = [];
+
 $("year").textContent = new Date().getFullYear();
 
 function esc(value = "") {
@@ -164,6 +167,39 @@ $("addQuestionBtn").addEventListener("click", () => {
 
 $("createQuizForm").addEventListener("submit", saveQuiz);
 
+if ($("createStudentForm")) {
+  $("createStudentForm").addEventListener(
+    "submit",
+    createStudentAccount
+  );
+}
+
+if ($("refreshStudentsBtn")) {
+  $("refreshStudentsBtn").addEventListener(
+    "click",
+    () => loadStudentDirectory()
+  );
+}
+
+if ($("studentSearch")) {
+  $("studentSearch").addEventListener(
+    "input",
+    renderStudentDirectory
+  );
+}
+
+if ($("studentClassFilter")) {
+  $("studentClassFilter").addEventListener(
+    "change",
+    renderStudentDirectory
+  );
+}
+
+if ($("resetStudentFormBtn")) {
+  $("resetStudentFormBtn").addEventListener("click", () => {
+    status("studentFormMessage", "");
+  });
+}
 if ($("cancelEditBtn")) {
   $("cancelEditBtn").addEventListener("click", () => {
     resetQuizForm();
@@ -280,7 +316,11 @@ async function loadAdminData() {
 
     fillSelect("quizClass", classes || [], "Choose class");
     fillSelect("quizSubject", subjects || [], "Choose subject");
+    classRows = classes || [];
 
+    populateStudentClassOptions(classRows);
+
+    await loadStudentDirectory(classRows);
     $("adminQuizCount").textContent = (quizzes || []).length;
     $("adminPublishedCount").textContent =
       (quizzes || []).filter(quiz => quiz.published).length;
@@ -739,3 +779,233 @@ async function deleteQuiz(id) {
 
 addQuestionEditor();
 setFormMode(false);
+
+function populateStudentClassOptions(classes) {
+  const studentClass = $("studentClass");
+  const classFilter = $("studentClassFilter");
+
+  if (!studentClass || !classFilter) return;
+
+  studentClass.innerHTML =
+    '<option value="">Select a class</option>' +
+    classes.map(row =>
+      `<option value="${esc(row.id)}">${esc(row.name)}</option>`
+    ).join("");
+
+  classFilter.innerHTML =
+    '<option value="">All classes</option>' +
+    classes.map(row =>
+      `<option value="${esc(row.id)}">${esc(row.name)}</option>`
+    ).join("");
+}
+
+async function createStudentAccount(event) {
+  event.preventDefault();
+
+  if (!db || !adminUser) {
+    return status(
+      "studentFormMessage",
+      "Please sign in as an administrator."
+    );
+  }
+
+  const display_name =
+    $("studentDisplayName").value.trim();
+
+  const username =
+    $("studentUsername").value.trim().toLowerCase();
+
+  const class_id = $("studentClass").value;
+  const password = $("studentPassword").value;
+
+  if (!/^[a-z0-9._-]{3,40}$/.test(username)) {
+    return status(
+      "studentFormMessage",
+      "Username must be 3–40 characters using letters, numbers, dots, underscores, or hyphens."
+    );
+  }
+
+  if (!display_name || !class_id) {
+    return status(
+      "studentFormMessage",
+      "Enter the student's name and select a class."
+    );
+  }
+
+  if (password.length < 8) {
+    return status(
+      "studentFormMessage",
+      "Password must contain at least 8 characters."
+    );
+  }
+
+  const button = $("createStudentBtn");
+  button.disabled = true;
+  button.textContent = "Creating account…";
+
+  status("studentFormMessage", "", false);
+
+  try {
+    // Calls a secure Supabase Edge Function.
+    const { data, error } = await db.functions.invoke(
+      "create-student-account",
+      {
+        body: {
+          username,
+          display_name,
+          class_id,
+          password
+        }
+      }
+    );
+
+    if (error) {
+      throw new Error(
+        error.message ||
+        "Could not create the student account."
+      );
+    }
+
+    if (data?.error) {
+      throw new Error(data.error);
+    }
+
+    $("createStudentForm").reset();
+
+    status(
+      "studentFormMessage",
+      `Account created successfully for ${display_name}.`,
+      false
+    );
+
+    await loadStudentDirectory();
+
+  } catch (error) {
+    console.error("Student creation failed:", error);
+
+    status(
+      "studentFormMessage",
+      error.message ||
+      "Account creation failed. Check the Edge Function and database policies."
+    );
+
+  } finally {
+    button.disabled = false;
+    button.innerHTML =
+      'Create student account <span>→</span>';
+  }
+}
+
+async function loadStudentDirectory(classes = null) {
+  const list = $("adminStudentList");
+
+  if (!list || !db || !adminUser) return;
+
+  if (Array.isArray(classes)) {
+    classRows = classes;
+    populateStudentClassOptions(classRows);
+  }
+
+  list.innerHTML =
+    '<div class="empty-state">Loading students…</div>';
+
+  try {
+    const { data, error } = await db
+      .from("profiles")
+      .select(
+        "id,username,display_name,class_id,role"
+      )
+      .eq("role", "student")
+      .order("username");
+
+    if (error) throw error;
+
+    studentRows = data || [];
+
+    renderStudentDirectory();
+
+    status(
+      "studentListMessage",
+      `${studentRows.length} student accounts found.`,
+      false
+    );
+
+  } catch (error) {
+    console.error(error);
+
+    list.innerHTML =
+      '<div class="empty-state">Could not load student accounts. Check your database permissions.</div>';
+
+    status(
+      "studentListMessage",
+      "Could not load students. Check the profiles table and RLS policies."
+    );
+  }
+}
+
+function renderStudentDirectory() {
+  const list = $("adminStudentList");
+  if (!list) return;
+
+  const searchTerm =
+    ($("studentSearch")?.value || "")
+      .trim()
+      .toLowerCase();
+
+  const classFilter =
+    $("studentClassFilter")?.value || "";
+
+  const classNameById = new Map(
+    classRows.map(row => [
+      String(row.id),
+      row.name
+    ])
+  );
+
+  const filtered = studentRows.filter(student => {
+    const name =
+      (student.display_name || "").toLowerCase();
+
+    const username =
+      (student.username || "").toLowerCase();
+
+    const matchesSearch =
+      !searchTerm ||
+      name.includes(searchTerm) ||
+      username.includes(searchTerm);
+
+    const matchesClass =
+      !classFilter ||
+      String(student.class_id || "") === classFilter;
+
+    return matchesSearch && matchesClass;
+  });
+
+  if (!filtered.length) {
+    list.innerHTML =
+      '<div class="empty-state">No matching students found.</div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(student => `
+    <article class="admin-quiz-item">
+      <div class="admin-quiz-title">
+        <strong>
+          ${esc(student.display_name || student.username)}
+        </strong>
+        <span class="status-pill published">Student</span>
+      </div>
+
+      <p>
+        Username:
+        <strong>${esc(student.username || "—")}</strong>
+        <br>
+        Class:
+        ${esc(
+          classNameById.get(String(student.class_id)) ||
+          "Not assigned"
+        )}
+      </p>
+    </article>
+  `).join("");
+}

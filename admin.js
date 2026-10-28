@@ -34,8 +34,15 @@ function esc(value = "") {
 }
 
 function status(id, message, error = true) {
-  $(id).textContent = message;
-  $(id).style.color = error ? "#b42318" : "#28753b";
+  const element = $(id);
+
+  if (!element) {
+    console.warn(`Status element not found: ${id}`, message);
+    return;
+  }
+
+  element.textContent = message;
+  element.style.color = error ? "#b42318" : "#28753b";
 }
 
 function usernameEmail(username) {
@@ -58,9 +65,11 @@ function setFormMode(editing) {
       : "Create a quiz and add its questions.";
   }
 
-  saveButton.innerHTML = editing
-    ? "Update quiz <span>→</span>"
-    : "Save quiz <span>→</span>";
+  if (saveButton) {
+    saveButton.innerHTML = editing
+      ? "Update quiz <span>→</span>"
+      : "Save quiz <span>→</span>";
+  }
 
   if (cancelButton) {
     cancelButton.classList.toggle("hidden", !editing);
@@ -69,14 +78,21 @@ function setFormMode(editing) {
 
 function resetQuizForm() {
   editingQuizId = null;
+
   $("createQuizForm").reset();
   $("quizDuration").value = 10;
   $("questionEditor").innerHTML = "";
+
   questionCounter = 0;
+
   addQuestionEditor();
   setFormMode(false);
-  status("adminFormMessage", "");
+  status("adminFormMessage", "", false);
 }
+
+// --------------------------------------------------
+// ADMIN LOGIN
+// --------------------------------------------------
 
 $("adminLoginForm").addEventListener("submit", async event => {
   event.preventDefault();
@@ -113,7 +129,10 @@ $("adminLoginForm").addEventListener("submit", async event => {
 
     if (error) throw error;
 
-    const { data: profile, error: profileError } = await db
+    const {
+      data: profile,
+      error: profileError
+    } = await db
       .from("profiles")
       .select("id,username,display_name,role")
       .eq("id", data.user.id)
@@ -121,6 +140,7 @@ $("adminLoginForm").addEventListener("submit", async event => {
 
     if (profileError || !profile || profile.role !== "admin") {
       await db.auth.signOut();
+
       throw new Error(
         "This account does not have administrator permission."
       );
@@ -133,6 +153,8 @@ $("adminLoginForm").addEventListener("submit", async event => {
 
     await loadAdminData();
   } catch (error) {
+    console.error("Admin login failed:", error);
+
     status(
       "adminLoginMessage",
       error.message ===
@@ -147,7 +169,9 @@ $("adminLoginForm").addEventListener("submit", async event => {
 });
 
 $("adminLogoutBtn").addEventListener("click", async () => {
-  if (db) await db.auth.signOut();
+  if (db) {
+    await db.auth.signOut();
+  }
 
   adminUser = null;
   editingQuizId = null;
@@ -166,6 +190,10 @@ $("addQuestionBtn").addEventListener("click", () => {
 });
 
 $("createQuizForm").addEventListener("submit", saveQuiz);
+
+// --------------------------------------------------
+// STUDENT FORM EVENT LISTENERS
+// --------------------------------------------------
 
 if ($("createStudentForm")) {
   $("createStudentForm").addEventListener(
@@ -197,15 +225,29 @@ if ($("studentClassFilter")) {
 
 if ($("resetStudentFormBtn")) {
   $("resetStudentFormBtn").addEventListener("click", () => {
-    status("studentFormMessage", "");
+    if ($("createStudentForm")) {
+      $("createStudentForm").reset();
+    }
+
+    status("studentFormMessage", "", false);
   });
 }
+
 if ($("cancelEditBtn")) {
   $("cancelEditBtn").addEventListener("click", () => {
     resetQuizForm();
-    status("adminFormMessage", "Editing cancelled.", false);
+
+    status(
+      "adminFormMessage",
+      "Editing cancelled.",
+      false
+    );
   });
 }
+
+// --------------------------------------------------
+// QUIZ QUESTION EDITOR
+// --------------------------------------------------
 
 function addQuestionEditor(question = null) {
   const number = ++questionCounter;
@@ -271,12 +313,20 @@ function renumberQuestions() {
 }
 
 function fillSelect(id, rows, placeholder) {
-  $(id).innerHTML =
+  const element = $(id);
+
+  if (!element) return;
+
+  element.innerHTML =
     `<option value="">${esc(placeholder)}</option>` +
     rows.map(row =>
       `<option value="${esc(row.id)}">${esc(row.name)}</option>`
     ).join("");
 }
+
+// --------------------------------------------------
+// LOAD ADMIN DASHBOARD DATA
+// --------------------------------------------------
 
 async function loadAdminData() {
   if (!db || !adminUser) return;
@@ -310,31 +360,40 @@ async function loadAdminData() {
         .limit(15)
     ]);
 
-    if (classError || subjectError || quizError || attemptError) {
-      throw new Error("One or more admin data queries failed.");
-    }
+    if (classError) throw classError;
+    if (subjectError) throw subjectError;
+    if (quizError) throw quizError;
+    if (attemptError) throw attemptError;
 
     fillSelect("quizClass", classes || [], "Choose class");
     fillSelect("quizSubject", subjects || [], "Choose subject");
+
     classRows = classes || [];
 
     populateStudentClassOptions(classRows);
 
     await loadStudentDirectory(classRows);
+
     $("adminQuizCount").textContent = (quizzes || []).length;
+
     $("adminPublishedCount").textContent =
       (quizzes || []).filter(quiz => quiz.published).length;
+
     $("adminAttemptCount").textContent = (attempts || []).length;
 
     renderAdminQuizzes(quizzes || []);
     renderAdminResults(attempts || []);
   } catch (error) {
-    console.error(error);
+    console.error("Load admin data failed:", error);
 
     $("adminQuizList").innerHTML =
       '<div class="empty-state">Could not load admin data. Check your Supabase connection and database policies.</div>';
   }
 }
+
+// --------------------------------------------------
+// RENDER QUIZZES
+// --------------------------------------------------
 
 function renderAdminQuizzes(quizzes) {
   if (!quizzes.length) {
@@ -396,6 +455,10 @@ function renderAdminQuizzes(quizzes) {
   });
 }
 
+// --------------------------------------------------
+// RENDER RESULTS
+// --------------------------------------------------
+
 function renderAdminResults(rows) {
   if (!rows.length) {
     $("adminResults").innerHTML =
@@ -431,6 +494,10 @@ function renderAdminResults(rows) {
   `;
 }
 
+// --------------------------------------------------
+// EDIT QUIZ
+// --------------------------------------------------
+
 async function editQuiz(quizId) {
   if (!adminUser) return;
 
@@ -445,7 +512,10 @@ async function editQuiz(quizId) {
 
     if (quizError) throw quizError;
 
-    const { data: questionRows, error: questionError } = await db
+    const {
+      data: questionRows,
+      error: questionError
+    } = await db
       .from("quiz_questions")
       .select("id,question_text,options,sort_order")
       .eq("quiz_id", quizId)
@@ -463,6 +533,7 @@ async function editQuiz(quizId) {
         .in("question_id", questionIds);
 
       if (error) throw error;
+
       answerKeys = data || [];
     }
 
@@ -489,9 +560,12 @@ async function editQuiz(quizId) {
       });
     });
 
-    if (!questionRows?.length) addQuestionEditor();
+    if (!questionRows?.length) {
+      addQuestionEditor();
+    }
 
     setFormMode(true);
+
     status(
       "adminFormMessage",
       "Quiz loaded. Make your changes and select Update quiz.",
@@ -503,7 +577,8 @@ async function editQuiz(quizId) {
       block: "start"
     });
   } catch (error) {
-    console.error(error);
+    console.error("Edit quiz failed:", error);
+
     status(
       "adminFormMessage",
       "Could not load this quiz for editing. Check the quiz and answer-key database policies."
@@ -511,9 +586,16 @@ async function editQuiz(quizId) {
   }
 }
 
+// --------------------------------------------------
+// SAVE QUIZ
+// --------------------------------------------------
+
 async function saveQuiz(event) {
   event.preventDefault();
+
   if (!adminUser) return;
+
+  const wasEditing = Boolean(editingQuizId);
 
   const title = $("quizTitle").value.trim();
   const description = $("quizDescription").value.trim();
@@ -572,8 +654,9 @@ async function saveQuiz(event) {
 
   const button = $("saveQuizBtn");
   button.disabled = true;
-  button.textContent = editingQuizId ? "Updating quiz…" : "Saving quiz…";
-  status("adminFormMessage", "");
+  button.textContent = wasEditing ? "Updating quiz…" : "Saving quiz…";
+
+  status("adminFormMessage", "", false);
 
   let quizId = editingQuizId;
   let createdNewQuiz = false;
@@ -611,8 +694,10 @@ async function saveQuiz(event) {
       createdNewQuiz = true;
     }
 
-    // Load the question IDs that currently belong to this quiz.
-    const { data: existingRows, error: existingError } = await db
+    const {
+      data: existingRows,
+      error: existingError
+    } = await db
       .from("quiz_questions")
       .select("id")
       .eq("quiz_id", quizId);
@@ -625,7 +710,6 @@ async function saveQuiz(event) {
 
     const retainedIds = new Set();
 
-    // Update existing questions, or insert newly added questions.
     for (let index = 0; index < questions.length; index++) {
       const question = questions[index];
 
@@ -654,12 +738,12 @@ async function saveQuiz(event) {
           .single();
 
         if (error) throw error;
+
         questionId = data.id;
       }
 
       retainedIds.add(questionId);
 
-      // Upsert keeps an existing answer key or creates a missing one.
       const { error: keyError } = await db
         .from("quiz_answer_keys")
         .upsert(
@@ -673,8 +757,9 @@ async function saveQuiz(event) {
       if (keyError) throw keyError;
     }
 
-    // Remove questions deleted in the editor.
-    const removedIds = [...existingIds].filter(id => !retainedIds.has(id));
+    const removedIds = [...existingIds].filter(
+      id => !retainedIds.has(id)
+    );
 
     if (removedIds.length) {
       const { error: deleteKeysError } = await db
@@ -698,7 +783,6 @@ async function saveQuiz(event) {
       }
     }
 
-    // Apply the selected publish/draft status after saving the questions.
     const { error: publishError } = await db
       .from("quizzes")
       .update({ published: publish })
@@ -710,7 +794,7 @@ async function saveQuiz(event) {
 
     status(
       "adminFormMessage",
-      editingQuizId
+      wasEditing
         ? "Quiz updated successfully."
         : publish
           ? "Quiz saved and published successfully."
@@ -720,10 +804,8 @@ async function saveQuiz(event) {
 
     await loadAdminData();
   } catch (error) {
-    console.error(error);
+    console.error("Save quiz failed:", error);
 
-    // Do not automatically unpublish an existing quiz just because
-    // editing failed. For a newly created quiz, try to leave it as a draft.
     if (createdNewQuiz && quizId) {
       await db
         .from("quizzes")
@@ -733,13 +815,18 @@ async function saveQuiz(event) {
 
     status(
       "adminFormMessage",
-      "Could not save all changes. " + (error.message || "Check your Supabase policies.")
+      "Could not save all changes. " +
+      (error.message || "Check your Supabase policies.")
     );
   } finally {
     button.disabled = false;
     setFormMode(Boolean(editingQuizId));
   }
 }
+
+// --------------------------------------------------
+// PUBLISH OR UNPUBLISH QUIZ
+// --------------------------------------------------
 
 async function togglePublished(id, currentlyPublished) {
   const { error } = await db
@@ -748,17 +835,28 @@ async function togglePublished(id, currentlyPublished) {
     .eq("id", id);
 
   if (error) {
-    alert("Could not update publication status. Check admin database policies.");
+    console.error("Publish status update failed:", error);
+
+    alert(
+      "Could not update publication status. Check admin database policies."
+    );
+
     return;
   }
 
   await loadAdminData();
 }
 
+// --------------------------------------------------
+// DELETE QUIZ
+// --------------------------------------------------
+
 async function deleteQuiz(id) {
   if (!confirm(
     "Delete this quiz and its questions? Existing attempts may prevent deletion. This cannot be undone."
-  )) return;
+  )) {
+    return;
+  }
 
   const { error } = await db
     .from("quizzes")
@@ -766,38 +864,62 @@ async function deleteQuiz(id) {
     .eq("id", id);
 
   if (error) {
+    console.error("Delete quiz failed:", error);
+
     alert(
       "Could not delete this quiz. It may have existing attempts. Unpublish it instead."
     );
+
     return;
   }
 
-  if (editingQuizId === id) resetQuizForm();
+  if (editingQuizId === id) {
+    resetQuizForm();
+  }
 
   await loadAdminData();
 }
 
-addQuestionEditor();
-setFormMode(false);
+// --------------------------------------------------
+// STUDENT CLASS DROPDOWNS
+// --------------------------------------------------
 
 function populateStudentClassOptions(classes) {
   const studentClass = $("studentClass");
   const classFilter = $("studentClassFilter");
 
-  if (!studentClass || !classFilter) return;
+  if (studentClass) {
+    const previousClass = studentClass.value;
 
-  studentClass.innerHTML =
-    '<option value="">Select a class</option>' +
-    classes.map(row =>
-      `<option value="${esc(row.id)}">${esc(row.name)}</option>`
-    ).join("");
+    studentClass.innerHTML =
+      '<option value="">Select a class</option>' +
+      classes.map(row =>
+        `<option value="${esc(row.id)}">${esc(row.name)}</option>`
+      ).join("");
 
-  classFilter.innerHTML =
-    '<option value="">All classes</option>' +
-    classes.map(row =>
-      `<option value="${esc(row.id)}">${esc(row.name)}</option>`
-    ).join("");
+    if (classes.some(row => String(row.id) === previousClass)) {
+      studentClass.value = previousClass;
+    }
+  }
+
+  if (classFilter) {
+    const previousFilter = classFilter.value;
+
+    classFilter.innerHTML =
+      '<option value="">All classes</option>' +
+      classes.map(row =>
+        `<option value="${esc(row.id)}">${esc(row.name)}</option>`
+      ).join("");
+
+    if (classes.some(row => String(row.id) === previousFilter)) {
+      classFilter.value = previousFilter;
+    }
+  }
 }
+
+// --------------------------------------------------
+// CREATE STUDENT ACCOUNT
+// --------------------------------------------------
 
 async function createStudentAccount(event) {
   event.preventDefault();
@@ -805,7 +927,7 @@ async function createStudentAccount(event) {
   if (!db || !adminUser) {
     return status(
       "studentFormMessage",
-      "Please sign in as an administrator."
+      "Please sign in as an administrator before creating student accounts."
     );
   }
 
@@ -821,14 +943,21 @@ async function createStudentAccount(event) {
   if (!/^[a-z0-9._-]{3,40}$/.test(username)) {
     return status(
       "studentFormMessage",
-      "Username must be 3–40 characters using letters, numbers, dots, underscores, or hyphens."
+      "Username must be 3–40 characters and contain only letters, numbers, dots, underscores, or hyphens."
     );
   }
 
-  if (!display_name || !class_id) {
+  if (!display_name) {
     return status(
       "studentFormMessage",
-      "Enter the student's name and select a class."
+      "Enter the student's full name."
+    );
+  }
+
+  if (!class_id) {
+    return status(
+      "studentFormMessage",
+      "Please select the student's class."
     );
   }
 
@@ -840,13 +969,22 @@ async function createStudentAccount(event) {
   }
 
   const button = $("createStudentBtn");
+
+  if (!button) {
+    return status(
+      "studentFormMessage",
+      "Create Student button not found. Check the button ID in admin.html."
+    );
+  }
+
   button.disabled = true;
   button.textContent = "Creating account…";
 
   status("studentFormMessage", "", false);
 
   try {
-    // Calls a secure Supabase Edge Function.
+    console.log("Calling create-student-account Edge Function.");
+
     const { data, error } = await db.functions.invoke(
       "create-student-account",
       {
@@ -859,29 +997,55 @@ async function createStudentAccount(event) {
       }
     );
 
+    // Read useful error details from the Edge Function response.
     if (error) {
+      let message =
+        error.message || "Could not create the student account.";
+
+      try {
+        const response = error.context;
+
+        if (response && typeof response.json === "function") {
+          const result = await response.json();
+
+          if (result?.error) {
+            message = result.error;
+          } else if (result?.message) {
+            message = result.message;
+          }
+        }
+      } catch (_) {
+        // Keep the original error message.
+      }
+
+      throw new Error(message);
+    }
+
+    console.log("Student creation function response:", data);
+
+    // Do not report success unless the Edge Function confirms it.
+    if (!data || data.success !== true) {
       throw new Error(
-        error.message ||
-        "Could not create the student account."
+        data?.error ||
+        data?.message ||
+        "The server did not confirm account creation. Check the Edge Function logs."
       );
     }
 
-    if (data?.error) {
-      throw new Error(data.error);
-    }
-
+    // Clear the form only after confirmed success.
     $("createStudentForm").reset();
 
     status(
       "studentFormMessage",
-      `Account created successfully for ${display_name}.`,
+      `Student account created successfully for ${display_name}.`,
       false
     );
 
+    // Refresh the student list after creation.
     await loadStudentDirectory();
 
   } catch (error) {
-    console.error("Student creation failed:", error);
+    console.error("Create student account failed:", error);
 
     status(
       "studentFormMessage",
@@ -896,6 +1060,10 @@ async function createStudentAccount(event) {
   }
 }
 
+// --------------------------------------------------
+// LOAD STUDENT DIRECTORY
+// --------------------------------------------------
+
 async function loadStudentDirectory(classes = null) {
   const list = $("adminStudentList");
 
@@ -907,16 +1075,14 @@ async function loadStudentDirectory(classes = null) {
   }
 
   list.innerHTML =
-    '<div class="empty-state">Loading students…</div>';
+    '<div class="empty-state">Loading student accounts…</div>';
 
   try {
     const { data, error } = await db
       .from("profiles")
-      .select(
-        "id,username,display_name,class_id,role"
-      )
+      .select("id,username,display_name,class_id,role")
       .eq("role", "student")
-      .order("username");
+      .order("username", { ascending: true });
 
     if (error) throw error;
 
@@ -926,25 +1092,30 @@ async function loadStudentDirectory(classes = null) {
 
     status(
       "studentListMessage",
-      `${studentRows.length} student accounts found.`,
+      `${studentRows.length} student account${studentRows.length === 1 ? "" : "s"} found.`,
       false
     );
 
   } catch (error) {
-    console.error(error);
+    console.error("Load student directory failed:", error);
 
     list.innerHTML =
-      '<div class="empty-state">Could not load student accounts. Check your database permissions.</div>';
+      '<div class="empty-state">Could not load students. Check the profiles SELECT policy for administrators.</div>';
 
     status(
       "studentListMessage",
-      "Could not load students. Check the profiles table and RLS policies."
+      "Student directory could not be loaded. Check your Supabase connection and RLS policies."
     );
   }
 }
 
+// --------------------------------------------------
+// SEARCH AND DISPLAY STUDENTS
+// --------------------------------------------------
+
 function renderStudentDirectory() {
   const list = $("adminStudentList");
+
   if (!list) return;
 
   const searchTerm =
@@ -983,7 +1154,7 @@ function renderStudentDirectory() {
 
   if (!filtered.length) {
     list.innerHTML =
-      '<div class="empty-state">No matching students found.</div>';
+      '<div class="empty-state">No students match your search or class filter.</div>';
     return;
   }
 
@@ -991,8 +1162,9 @@ function renderStudentDirectory() {
     <article class="admin-quiz-item">
       <div class="admin-quiz-title">
         <strong>
-          ${esc(student.display_name || student.username)}
+          ${esc(student.display_name || student.username || "Student")}
         </strong>
+
         <span class="status-pill published">Student</span>
       </div>
 
@@ -1000,7 +1172,7 @@ function renderStudentDirectory() {
         Username:
         <strong>${esc(student.username || "—")}</strong>
         <br>
-
+        Class:
         ${esc(
           classNameById.get(String(student.class_id)) ||
           "Not assigned"
@@ -1009,3 +1181,10 @@ function renderStudentDirectory() {
     </article>
   `).join("");
 }
+
+// --------------------------------------------------
+// INITIALIZE
+// --------------------------------------------------
+
+addQuestionEditor();
+setFormMode(false);

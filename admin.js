@@ -21,7 +21,14 @@ let editingQuizId = null;
 let studentRows = [];
 let classRows = [];
 
+let adminAuthCheckInProgress = false;
+let adminDataLoading = false;
+
 $("year").textContent = new Date().getFullYear();
+
+// --------------------------------------------------
+// GENERAL HELPERS
+// --------------------------------------------------
 
 function esc(value = "") {
   return String(value).replace(/[&<>"']/g, char => ({
@@ -47,6 +54,11 @@ function status(id, message, error = true) {
 
 function usernameEmail(username) {
   return `${username.trim().toLowerCase()}@students.schoolquiz.app`;
+}
+
+function setAdminView(isAuthenticated) {
+  $("adminLoginView").classList.toggle("hidden", isAuthenticated);
+  $("adminView").classList.toggle("hidden", !isAuthenticated);
 }
 
 function setFormMode(editing) {
@@ -91,9 +103,90 @@ function resetQuizForm() {
 }
 
 // --------------------------------------------------
-// ADMIN LOGIN
+// ADMIN AUTHENTICATION
 // --------------------------------------------------
 
+async function verifyAdminSession() {
+  if (!db || adminAuthCheckInProgress) {
+    return false;
+  }
+
+  adminAuthCheckInProgress = true;
+
+  try {
+    // Check whether Supabase has a saved login session.
+    const {
+      data: { session },
+      error: sessionError
+    } = await db.auth.getSession();
+
+    if (sessionError) {
+      throw sessionError;
+    }
+
+    if (!session?.user) {
+      adminUser = null;
+      setAdminView(false);
+      return false;
+    }
+
+    // Verify the user's role before opening the dashboard.
+    const {
+      data: profile,
+      error: profileError
+    } = await db
+      .from("profiles")
+      .select("id,username,display_name,role")
+      .eq("id", session.user.id)
+      .single();
+
+    if (profileError) {
+      throw profileError;
+    }
+
+    if (!profile || profile.role !== "admin") {
+      // Sign out only after confirming this account is not an admin.
+      await db.auth.signOut();
+
+      adminUser = null;
+      setAdminView(false);
+
+      status(
+        "adminLoginMessage",
+        "This account does not have administrator permission."
+      );
+
+      return false;
+    }
+
+    adminUser = session.user;
+
+    // Reveal the dashboard only after authentication and role checks.
+    setAdminView(true);
+
+    await loadAdminData();
+
+    return true;
+
+  } catch (error) {
+    console.error("Admin session verification failed:", error);
+
+    adminUser = null;
+    setAdminView(false);
+
+    status(
+      "adminLoginMessage",
+      "Could not verify your session. Please sign in again."
+    );
+
+    return false;
+
+  } finally {
+    adminAuthCheckInProgress = false;
+  }
+}
+
+// Handle admin login.
 $("adminLoginForm").addEventListener("submit", async event => {
   event.preventDefault();
 
@@ -121,14 +214,28 @@ $("adminLoginForm").addEventListener("submit", async event => {
   button.disabled = true;
   button.textContent = "Signing in…";
 
+  status("adminLoginMessage", "", false);
+
   try {
-    const { data, error } = await db.auth.signInWithPassword({
+    const {
+      data,
+      error
+    } = await db.auth.signInWithPassword({
       email: usernameEmail(username),
       password
     });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
+    if (!data?.session || !data?.user) {
+      throw new Error(
+        "Login succeeded, but Supabase did not return a valid session."
+      );
+    }
+
+    // Confirm the profile belongs to an administrator.
     const {
       data: profile,
       error: profileError
@@ -138,7 +245,11 @@ $("adminLoginForm").addEventListener("submit", async event => {
       .eq("id", data.user.id)
       .single();
 
-    if (profileError || !profile || profile.role !== "admin") {
+    if (profileError) {
+      throw profileError;
+    }
+
+    if (!profile || profile.role !== "admin") {
       await db.auth.signOut();
 
       throw new Error(
@@ -148,40 +259,90 @@ $("adminLoginForm").addEventListener("submit", async event => {
 
     adminUser = data.user;
 
-    $("adminLoginView").classList.add("hidden");
-    $("adminView").classList.remove("hidden");
+    // Do not show the dashboard until role verification succeeds.
+    setAdminView(true);
 
     await loadAdminData();
+
+    status("adminLoginMessage", "", false);
+
   } catch (error) {
     console.error("Admin login failed:", error);
+
+    adminUser = null;
+    setAdminView(false);
 
     status(
       "adminLoginMessage",
       error.message ===
         "This account does not have administrator permission."
         ? error.message
-        : "Sign-in failed. Check the administrator username and password."
+        : "Sign-in failed. Check your administrator username and password, and inspect the browser console for details."
     );
+
   } finally {
     button.disabled = false;
     button.innerHTML = 'Sign in to admin <span>→</span>';
   }
 });
 
+// Handle admin logout.
 $("adminLogoutBtn").addEventListener("click", async () => {
-  if (db) {
-    await db.auth.signOut();
+  const button = $("adminLogoutBtn");
+
+  if (button) {
+    button.disabled = true;
   }
 
-  adminUser = null;
-  editingQuizId = null;
+  try {
+    if (db) {
+      const { error } = await db.auth.signOut();
 
-  $("adminView").classList.add("hidden");
-  $("adminLoginView").classList.remove("hidden");
-  $("adminLoginForm").reset();
+      if (error) {
+        throw error;
+      }
+    }
 
-  resetQuizForm();
+    adminUser = null;
+    editingQuizId = null;
+
+    setAdminView(false);
+    $("adminLoginForm").reset();
+
+    resetQuizForm();
+
+    status("adminLoginMessage", "", false);
+
+  } catch (error) {
+    console.error("Admin logout failed:", error);
+
+    status(
+      "adminLoginMessage",
+      "Logout failed. Please try again."
+    );
+
+  } finally {
+    if (button) {
+      button.disabled = false;
+    }
+  }
 });
+
+// Restore the saved session when admin.html opens or refreshes.
+if (db) {
+  verifyAdminSession();
+} else {
+  setAdminView(false);
+
+  status(
+    "adminLoginMessage",
+    "Configure your Supabase URL and key in config.js first."
+  );
+}
+
+// --------------------------------------------------
+// GENERAL EVENT LISTENERS
+// --------------------------------------------------
 
 $("refreshAdminBtn").addEventListener("click", loadAdminData);
 
@@ -329,7 +490,11 @@ function fillSelect(id, rows, placeholder) {
 // --------------------------------------------------
 
 async function loadAdminData() {
-  if (!db || !adminUser) return;
+  if (!db || !adminUser || adminDataLoading) {
+    return;
+  }
+
+  adminDataLoading = true;
 
   $("adminQuizList").innerHTML =
     '<div class="empty-state">Loading quizzes…</div>';
@@ -383,11 +548,15 @@ async function loadAdminData() {
 
     renderAdminQuizzes(quizzes || []);
     renderAdminResults(attempts || []);
+
   } catch (error) {
     console.error("Load admin data failed:", error);
 
     $("adminQuizList").innerHTML =
       '<div class="empty-state">Could not load admin data. Check your Supabase connection and database policies.</div>';
+
+  } finally {
+    adminDataLoading = false;
   }
 }
 
@@ -576,6 +745,7 @@ async function editQuiz(quizId) {
       behavior: "smooth",
       block: "start"
     });
+
   } catch (error) {
     console.error("Edit quiz failed:", error);
 
@@ -678,6 +848,7 @@ async function saveQuiz(event) {
         .eq("id", editingQuizId);
 
       if (error) throw error;
+
     } else {
       const { data, error } = await db
         .from("quizzes")
@@ -730,6 +901,7 @@ async function saveQuiz(event) {
           .eq("quiz_id", quizId);
 
         if (error) throw error;
+
       } else {
         const { data, error } = await db
           .from("quiz_questions")
@@ -803,6 +975,7 @@ async function saveQuiz(event) {
     );
 
     await loadAdminData();
+
   } catch (error) {
     console.error("Save quiz failed:", error);
 
@@ -818,6 +991,7 @@ async function saveQuiz(event) {
       "Could not save all changes. " +
       (error.message || "Check your Supabase policies.")
     );
+
   } finally {
     button.disabled = false;
     setFormMode(Boolean(editingQuizId));
@@ -997,9 +1171,8 @@ async function createStudentAccount(event) {
       }
     );
 
-    // Read useful error details from the Edge Function response.
     if (error) {
-      let message =
+      let errorMessage =
         error.message || "Could not create the student account.";
 
       try {
@@ -1009,21 +1182,20 @@ async function createStudentAccount(event) {
           const result = await response.json();
 
           if (result?.error) {
-            message = result.error;
+            errorMessage = result.error;
           } else if (result?.message) {
-            message = result.message;
+            errorMessage = result.message;
           }
         }
       } catch (_) {
         // Keep the original error message.
       }
 
-      throw new Error(message);
+      throw new Error(errorMessage);
     }
 
     console.log("Student creation function response:", data);
 
-    // Do not report success unless the Edge Function confirms it.
     if (!data || data.success !== true) {
       throw new Error(
         data?.error ||
@@ -1032,7 +1204,6 @@ async function createStudentAccount(event) {
       );
     }
 
-    // Clear the form only after confirmed success.
     $("createStudentForm").reset();
 
     status(
@@ -1041,7 +1212,6 @@ async function createStudentAccount(event) {
       false
     );
 
-    // Refresh the student list after creation.
     await loadStudentDirectory();
 
   } catch (error) {

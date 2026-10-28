@@ -69,4 +69,243 @@ a{color:var(--green)}.admin-columns{display:grid;grid-template-columns:minmax(0,
   }
 }
 
+/* ==========================================
+   STUDENT MANAGEMENT — MATCH QUIZ BUILDER
+   Add at the very bottom of style.css
+========================================== */
+
+/* Make the entire student management section full width */
+#userManagementSection.login-card {
+  width: 100%;
+  max-width: none;
+  justify-self: stretch;
+  margin: 28px 0 !important;
+  padding: 28px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+}
+
+/* Section heading */
+#userManagementSection > .section-heading {
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+
+#userManagementSection .section-heading h2 {
+  margin: 8px 0 5px;
+  font-size: 25px;
+  letter-spacing: -0.7px;
+}
+
+#userManagementSection .section-heading p {
+  max-width: 480px;
+}
+
+/* Two balanced panels, like the quiz builder and quiz list */
+#userManagementSection .admin-columns {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+  margin-top: 22px !important;
+}
+
+/* Give each side the same card-based appearance */
+#userManagementSection .admin-columns > div {
+  min-width: 0;
+  padding: 22px;
+  background: #fcfdf9;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+}
+
+/* Panel headings */
+#userManagementSection .admin-columns h3 {
+  margin: 0 0 8px;
+  font-size: 19px;
+  letter-spacing: -0.4px;
+}
+
+#userManagementSection .admin-columns > div > .muted {
+  margin: 0 0 20px;
+}
+
+/* Form layout */
+#userManagementSection #createStudentForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  margin-top: 18px;
+}
+
+#userManagementSection #createStudentForm label,
+#userManagementSection .admin-columns > div > label {
+  display: block;
+  margin: 15px 0 7px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+#userManagementSection #createStudentForm input,
+#userManagementSection #createStudentForm select,
+#userManagementSection #studentSearch,
+#userManagementSection #studentClassFilter {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 47px;
+  padding: 12px 13px;
+  border: 1px solid #dfe6dc;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#userManagementSection #createStudentForm input:focus,
+#userManagementSection #createStudentForm select:focus,
+#userManagementSection #studentSearch:focus,
+#userManagementSection #studentClassFilter:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px #2f7d3215;
+}
+
+/* Username and password helper text */
+#userManagementSection .small-note {
+  display: block;
+  text-align: left;
+  margin: 8px 0 5px;
+  line-height: 1.6;
+}
+
+/* Buttons match the green quiz-builder actions */
+#userManagementSection .admin-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 22px !important;
+}
+
+#userManagementSection .admin-form-actions .primary-btn {
+  flex: 1 1 190px;
+  margin-top: 0;
+  min-height: 47px;
+}
+
+#userManagementSection .admin-form-actions .outline-btn {
+  min-height: 47px;
+}
+
+#userManagementSection #refreshStudentsBtn {
+  flex-shrink: 0;
+  min-height: 43px;
+  padding: 10px 14px;
+}
+
+/* Student directory controls */
+#userManagementSection #studentSearch {
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
+
+#userManagementSection #studentClassFilter {
+  margin-bottom: 16px;
+}
+
+/* Student cards use the same style as question cards */
+#userManagementSection #adminStudentList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px !important;
+}
+
+#userManagementSection #adminStudentList .admin-quiz-item,
+#userManagementSection #adminStudentList > div:not(.empty-state) {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #fff;
+  overflow-wrap: anywhere;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#userManagementSection #adminStudentList .admin-quiz-item:hover,
+#userManagementSection #adminStudentList > div:not(.empty-state):hover {
+  border-color: #c5d9bd;
+  box-shadow: 0 4px 14px #24451b0b;
+}
+
+/* Keep empty states full width */
+#userManagementSection #adminStudentList .empty-state {
+  grid-column: 1 / -1;
+}
+
+/* Status and feedback messages */
+#userManagementSection .message {
+  margin: 12px 0 0;
+  line-height: 1.6;
+}
+
+#userManagementSection > .small-note {
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+/* Tablet */
+@media (max-width: 900px) {
+  #userManagementSection.login-card {
+    padding: 22px;
+  }
+
+  #userManagementSection .admin-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #userManagementSection #adminStudentList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Mobile */
+@media (max-width: 540px) {
+  #userManagementSection.login-card {
+    padding: 17px;
+    border-radius: 15px;
+  }
+
+  #userManagementSection > .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  #userManagementSection .admin-columns > div {
+    padding: 16px;
+  }
+
+  #userManagementSection #adminStudentList {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #userManagementSection .admin-form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #userManagementSection .admin-form-actions .primary-btn,
+  #userManagementSection .admin-form-actions .outline-btn {
+    width: 100%;
+  }
+}
+
 

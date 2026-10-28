@@ -1000,7 +1000,7 @@ function renderStudentDirectory() {
         Username:
         <strong>${esc(student.username || "—")}</strong>
         <br>
-        Class:
+
         ${esc(
           classNameById.get(String(student.class_id)) ||
           "Not assigned"

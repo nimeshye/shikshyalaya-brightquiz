@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -11,10 +12,10 @@
   <header class="topbar">
     <a class="brand" href="index.html">
       <img
-    class="brand-logo"
-    src="school-logo.png"
-    alt="Shikshyalaya Nepal logo"
-  />
+        class="brand-logo"
+        src="school-logo.png"
+        alt="Shikshyalaya Nepal logo"
+      />
       <span>
         Shikshyalaya <span class="yellow-text">Nepal</span>
         <small>BRIGHTQUIZ ADMIN</small>
@@ -24,6 +25,7 @@
   </header>
 
   <main class="shell">
+
     <!-- ADMIN LOGIN -->
     <section id="adminLoginView" class="login-layout">
       <div class="welcome">
@@ -39,6 +41,7 @@
           <div><span class="feature-icon">✓</span> Edit published questions</div>
           <div><span class="feature-icon">✓</span> Add questions to existing quizzes</div>
           <div><span class="feature-icon">✓</span> Review student results</div>
+          <div><span class="feature-icon">✓</span> Create and manage student accounts</div>
         </div>
       </div>
 
@@ -75,13 +78,14 @@
         </form>
 
         <p class="small-note">
-          Administrator accounts must be created by the database owner.
+          Administrator accounts must be created by an authorized database administrator.
         </p>
       </div>
     </section>
 
     <!-- ADMIN DASHBOARD -->
     <section id="adminView" class="hidden">
+
       <div class="dashboard-heading">
         <div>
           <span class="eyebrow">SCHOOL ADMINISTRATION</span>
@@ -122,6 +126,187 @@
         </div>
       </div>
 
+      <!-- STUDENT ACCOUNT MANAGEMENT -->
+      <section
+        class="login-card"
+        id="userManagementSection"
+        style="margin: 24px 0;"
+      >
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow" style="color:var(--green)">
+              ACCOUNT MANAGEMENT
+            </span>
+            <h2>Student accounts</h2>
+            <p class="muted">
+              Create student login accounts and assign each student to a class.
+            </p>
+          </div>
+
+          <button
+            id="refreshStudentsBtn"
+            class="outline-btn"
+            type="button"
+          >
+            Refresh students
+          </button>
+        </div>
+
+        <div class="admin-columns" style="margin-top:20px;">
+
+          <!-- CREATE STUDENT FORM -->
+          <div>
+            <h3>Create a student account</h3>
+            <p class="muted">
+              The student will sign in using their username and password.
+            </p>
+
+            <form id="createStudentForm">
+
+              <label for="studentDisplayName">Student's full name</label>
+              <input
+                id="studentDisplayName"
+                name="display_name"
+                required
+                maxlength="120"
+                autocomplete="name"
+                placeholder="e.g. Aarav Sharma"
+              />
+
+              <label for="studentUsername">Username</label>
+              <input
+                id="studentUsername"
+                name="username"
+                required
+                minlength="3"
+                maxlength="40"
+                pattern="[A-Za-z0-9._-]+"
+                autocomplete="off"
+                autocapitalize="none"
+                placeholder="e.g. aarav2026"
+                aria-describedby="studentUsernameHelp"
+              />
+
+              <small id="studentUsernameHelp" class="small-note">
+                Use 3–40 letters, numbers, dots, underscores, or hyphens.
+                Usernames must be unique.
+              </small>
+
+              <label for="studentClass">Assign class</label>
+              <select id="studentClass" name="class_id" required>
+                <option value="">Select a class</option>
+                <option value="1">Class 1</option>
+                <option value="2">Class 2</option>
+                <option value="3">Class 3</option>
+                <option value="4">Class 4</option>
+                <option value="5">Class 5</option>
+                <option value="6">Class 6</option>
+                <option value="7">Class 7</option>
+                <option value="8">Class 8</option>
+                <option value="9">Class 9</option>
+                <option value="10">Class 10</option>
+              </select>
+
+              <label for="studentPassword">Initial password</label>
+              <input
+                id="studentPassword"
+                name="password"
+                type="password"
+                required
+                minlength="8"
+                autocomplete="new-password"
+                placeholder="At least 8 characters"
+                aria-describedby="studentPasswordHelp"
+              />
+
+              <small id="studentPasswordHelp" class="small-note">
+                Give the password to the student securely.
+              </small>
+
+              <div class="admin-form-actions" style="margin-top:18px;">
+                <button
+                  id="createStudentBtn"
+                  class="primary-btn"
+                  type="submit"
+                >
+                  Create student account <span>→</span>
+                </button>
+
+                <button
+                  id="resetStudentFormBtn"
+                  class="outline-btn"
+                  type="reset"
+                >
+                  Clear form
+                </button>
+              </div>
+
+              <p
+                id="studentFormMessage"
+                class="message"
+                role="status"
+                aria-live="polite"
+              ></p>
+            </form>
+          </div>
+
+          <!-- STUDENT DIRECTORY -->
+          <div>
+            <div class="section-heading">
+              <div>
+                <h3>Student directory</h3>
+                <p class="muted">
+                  View students and their assigned classes.
+                </p>
+              </div>
+            </div>
+
+            <label for="studentSearch">Search students</label>
+            <input
+              id="studentSearch"
+              type="search"
+              placeholder="Search by name or username"
+              autocomplete="off"
+            />
+
+            <label for="studentClassFilter">Filter by class</label>
+            <select id="studentClassFilter">
+              <option value="">All classes</option>
+              <option value="1">Class 1</option>
+              <option value="2">Class 2</option>
+              <option value="3">Class 3</option>
+              <option value="4">Class 4</option>
+              <option value="5">Class 5</option>
+              <option value="6">Class 6</option>
+              <option value="7">Class 7</option>
+              <option value="8">Class 8</option>
+              <option value="9">Class 9</option>
+              <option value="10">Class 10</option>
+            </select>
+
+            <div
+              id="adminStudentList"
+              class="admin-quiz-list"
+              aria-live="polite"
+              style="margin-top:14px;"
+            >
+              <div class="empty-state">
+                Student accounts will appear here when account management is connected.
+              </div>
+            </div>
+
+            <p id="studentListMessage" class="message" role="status"></p>
+          </div>
+        </div>
+
+        <p class="small-note" style="margin-top:18px;">
+          Security note: account creation must be processed by a secure
+          server-side function that verifies the signed-in admin. Never put
+          the Supabase service-role key in this page or browser JavaScript.
+        </p>
+      </section>
+
+      <!-- QUIZ MANAGEMENT -->
       <div class="admin-columns">
 
         <!-- CREATE / EDIT QUIZ FORM -->
@@ -188,7 +373,6 @@
               </button>
             </div>
 
-            <!-- Existing and new questions are loaded here -->
             <div id="questionEditor"></div>
 
             <label class="check-row">
@@ -196,7 +380,6 @@
               Publish immediately after saving
             </label>
 
-            <!-- FORM ACTIONS -->
             <div class="admin-form-actions">
               <button
                 id="saveQuizBtn"
@@ -270,4 +453,3 @@
   <script src="admin.js"></script>
 </body>
 </html>
-```
